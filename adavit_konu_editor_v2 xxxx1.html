@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adavit — Konu Bölümü Editörü v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --teal:#2F6F73;--teal-light:#E8F5F5;--teal-mid:#C8E6E6;
+  --teal-dark:#1E5457;--gold:#C88B3A;--gold-light:#FEF3E2;
+  --text:#1A2E2F;--text-muted:#5E7E80;--bg:#F7FAFA;
+  --white:#ffffff;--border:#DCF0F0;
+}
+body{font-family:'DM Sans',sans-serif;background:#eef4f4;min-height:100vh;}
+
+/* SHELL */
+.shell{display:grid;grid-template-columns:380px 1fr;min-height:100vh;}
+
+/* PANEL */
+.panel{background:#fff;border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;}
+.panel-top{padding:20px 20px 0;border-bottom:1px solid var(--border);padding-bottom:16px;}
+.panel-logo{font-family:'Playfair Display',serif;font-size:17px;color:var(--teal);}
+.panel-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);}
+.tab{flex:1;padding:11px 8px;font-size:12px;font-weight:500;color:var(--text-muted);
+  border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal);}
+.tab-content{display:none;padding:16px 20px;flex-direction:column;gap:12px;}
+.tab-content.active{display:flex;}
+
+/* FORM ELEMANLAR */
+.field{display:flex;flex-direction:column;gap:4px;}
+.field label{font-size:10px;font-weight:500;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;}
+.field input,.field textarea{
+  padding:8px 11px;border:1px solid var(--border);border-radius:7px;
+  font-family:'DM Sans',sans-serif;font-size:12.5px;color:var(--text);
+  background:var(--bg);outline:none;transition:border-color 0.15s;
+}
+.field input:focus,.field textarea:focus{border-color:var(--teal);}
+.field textarea{resize:vertical;min-height:60px;line-height:1.5;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.divider{height:1px;background:var(--border);margin:4px 0;}
+
+/* Konu listesi */
+.topic-list{display:flex;flex-direction:column;gap:0;}
+.topic-item{border-bottom:1px solid var(--border);}
+.topic-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;cursor:pointer;background:none;border:none;
+  width:100%;text-align:left;font-family:'DM Sans',sans-serif;
+  font-size:12px;color:var(--text);transition:background 0.12s;
+}
+.topic-header:hover{background:var(--teal-light);}
+.topic-header .tlabel{flex:1;font-size:11.5px;line-height:1.35;}
+.topic-header i{font-size:14px;color:var(--text-muted);flex-shrink:0;transition:transform 0.2s;}
+.topic-header.open i{transform:rotate(180deg);}
+.topic-body{display:none;padding:10px 12px 14px;background:#fafefe;border-top:1px solid var(--border);}
+.topic-body.open{display:flex;flex-direction:column;gap:8px;}
+.topic-body .field label{font-size:9.5px;}
+
+/* Fotoğraf */
+.upload-area{
+  border:2px dashed var(--teal-mid);border-radius:10px;
+  padding:16px;text-align:center;cursor:pointer;
+  transition:all 0.15s;background:var(--teal-light);
+}
+.upload-area:hover{border-color:var(--teal);}
+.upload-area i{font-size:24px;color:var(--teal);display:block;margin-bottom:6px;}
+.upload-area span{font-size:11px;color:var(--text-muted);}
+.upload-area input{display:none;}
+
+/* Butonlar */
+.btn-dl{
+  width:100%;padding:12px;background:var(--teal);color:#fff;
+  border:none;border-radius:9px;font-family:'DM Sans',sans-serif;
+  font-size:13.5px;font-weight:500;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  transition:background 0.15s;
+}
+.btn-dl:hover{background:var(--teal-dark);}
+.btn-cp{
+  width:100%;padding:9px;background:transparent;color:var(--teal);
+  border:1.5px solid var(--teal-mid);border-radius:9px;
+  font-family:'DM Sans',sans-serif;font-size:12.5px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  transition:all 0.15s;
+}
+.btn-cp:hover{background:var(--teal-light);}
+.panel-btns{padding:16px 20px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;}
+
+/* PREVIEW */
+.preview-wrap{padding:28px;overflow-y:auto;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.preview-lbl{font-size:10px;color:#aaa;letter-spacing:0.07em;text-transform:uppercase;align-self:flex-start;}
+
+/* KART */
+#pcard{
+  background:var(--bg);border-radius:20px;
+  padding:44px 44px;width:100%;max-width:900px;
+  display:grid;grid-template-columns:1fr 300px;gap:44px;align-items:start;
+}
+.adv-badge{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--teal-light);color:var(--teal);
+  font-size:10.5px;font-weight:500;letter-spacing:0.06em;
+  padding:5px 13px;border-radius:20px;margin-bottom:16px;text-transform:uppercase;
+}
+.adv-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--teal);}
+.adv-heading{font-family:'Playfair Display',serif;font-size:28px;font-weight:400;line-height:1.25;color:var(--text);margin-bottom:9px;}
+.adv-heading em{color:var(--teal);font-style:italic;}
+.adv-sub{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:22px;}
+.adv-chips{display:flex;flex-wrap:wrap;gap:7px;}
+.adv-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:999px;
+  border:1.5px solid var(--teal-mid);
+  background:var(--white);color:var(--teal);font-size:11.5px;
+  cursor:pointer;transition:all 0.18s;
+}
+.adv-chip .dot{width:5px;height:5px;border-radius:50%;background:var(--teal-mid);flex-shrink:0;transition:background 0.18s;}
+.adv-chip:hover{background:var(--teal-light);border-color:var(--teal);}
+.adv-chip:hover .dot{background:var(--teal);}
+.adv-chip.active{background:var(--teal);border-color:var(--teal);color:#fff;}
+.adv-chip.active .dot{background:rgba(255,255,255,0.4);}
+.adv-chip.special{border-color:#E8C97A;background:var(--gold-light);color:var(--gold);font-style:italic;}
+.adv-chip.special .dot{background:#E8C97A;}
+.adv-chip.special.active{background:var(--gold);border-color:var(--gold);color:#fff;}
+.adv-acc{max-height:0;overflow:hidden;opacity:0;transition:max-height 0.4s ease,opacity 0.3s ease,margin-top 0.3s ease;}
+.adv-acc.open{max-height:400px;opacity:1;margin-top:16px;}
+.adv-card{
+  background:var(--white);
+  border-left:3px solid var(--teal);
+  border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+  border-radius:0 12px 12px 0;padding:1.3rem 1.5rem;
+}
+.adv-card-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.adv-card-ico{width:38px;height:38px;border-radius:50%;background:var(--teal-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.adv-card-ico i{font-size:18px;color:var(--teal);}
+.adv-card-ttl{font-size:13px;font-weight:500;color:var(--text);}
+.adv-card-div{height:1px;background:var(--border);margin-bottom:11px;}
+.adv-card-txt{font-size:12px;color:var(--text-muted);line-height:1.75;margin-bottom:16px;}
+.adv-btns{display:flex;flex-direction:column;gap:8px;align-items:flex-start;}
+.adv-btn-p{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:10px 20px;background:var(--teal);color:#fff;
+  border:none;border-radius:8px;font-family:'DM Sans',sans-serif;
+  font-size:12.5px;font-weight:500;cursor:pointer;
+}
+.adv-btn-l{
+  display:inline-flex;align-items:center;gap:5px;
+  background:none;border:none;color:var(--text-muted);
+  font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;padding:0;
+  text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--border);
+}
+.adv-disc{
+  margin-top:22px;padding:10px 13px;
+  background:var(--teal-light);border-radius:8px;
+  font-size:10px;color:var(--text-muted);line-height:1.6;text-align:center;
+}
+/* GÖRSEL */
+.adv-vc{background:var(--white);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.adv-vi{width:100%;aspect-ratio:4/5;position:relative;overflow:hidden;background:linear-gradient(160deg,#C8E6E6 0%,#E8F5F5 60%,#F0FAF7 100%);display:flex;align-items:center;justify-content:center;}
+.adv-vi img{width:100%;height:100%;object-fit:cover;display:block;position:absolute;top:0;left:0;}
+.adv-vf{padding:13px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.adv-av{width:36px;height:36px;border-radius:50%;background:var(--teal-light);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--teal);flex-shrink:0;}
+.adv-vn{font-size:12px;font-weight:500;color:var(--text);}
+.adv-vr{font-size:10px;color:var(--text-muted);margin-top:2px;}
+.adv-ol{margin-left:auto;display:flex;align-items:center;gap:4px;background:#E8F5EE;color:#1A7A4A;font-size:10px;font-weight:500;padding:3px 8px;border-radius:20px;white-space:nowrap;}
+.adv-ol::before{content:'';width:5px;height:5px;border-radius:50%;background:#1A7A4A;}
+.adv-tr{display:flex;border-top:1px solid var(--border);}
+.adv-tr-i{flex:1;padding:10px 5px;text-align:center;border-right:1px solid var(--border);}
+.adv-tr-i:last-child{border-right:none;}
+.adv-tr-n{font-family:'Playfair Display',serif;font-size:16px;font-weight:500;color:var(--teal);}
+.adv-tr-l{font-size:9px;color:var(--text-muted);margin-top:2px;line-height:1.3;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ═══ PANEL ═══ -->
+<div class="panel">
+  <div class="panel-top">
+    <div class="panel-logo">adavit editör</div>
+    <div class="panel-sub">Düzenle → Önizle → İndir</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('genel')">Genel</button>
+    <button class="tab" onclick="switchTab('linkler')">Linkler</button>
+    <button class="tab" onclick="switchTab('konular')">Konular</button>
+    <button class="tab" onclick="switchTab('gorsel')">Görsel</button>
+  </div>
+
+  <!-- TAB: GENEL -->
+  <div class="tab-content active" id="tab-genel">
+    <div class="field"><label>Badge</label><input id="g-badge" value="Türkçe Sağlık Danışmanlığı"></div>
+    <div class="field"><label>Başlık — normal</label><input id="g-t1" value="Hangi konuda"></div>
+    <div class="field"><label>Başlık — italik/renkli</label><input id="g-t2" value="destek"></div>
+    <div class="field"><label>Başlık — devam</label><input id="g-t3" value="almak istiyorsunuz?"></div>
+    <div class="field"><label>Alt başlık</label><input id="g-sub" value="Bir konu seçin — uzman danışmanımız size özel bilgi versin."></div>
+    <div class="divider"></div>
+    <div class="field"><label>Danışman adı</label><input id="g-dname" value="Türkiye'de uzman danışman"></div>
+    <div class="field"><label>Danışman alt bilgi</label><input id="g-drole" value="Online · Türkçe görüşme"></div>
+    <div class="divider"></div>
+    <div class="field-row">
+      <div class="field"><label>Rakam 1</label><input id="g-t1n" value="8+"></div>
+      <div class="field"><label>Etiket 1</label><input id="g-t1l" value="Uzman danışman"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Rakam 2</label><input id="g-t2n" value="7/24"></div>
+      <div class="field"><label>Etiket 2</label><input id="g-t2l" value="Randevu imkânı"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Rakam 3</label><input id="g-t3n" value="%100"></div>
+      <div class="field"><label>Etiket 3</label><input id="g-t3l" value="Türkçe hizmet"></div>
+    </div>
+    <div class="divider"></div>
+    <div class="field"><label>Disclaimer</label><textarea id="g-disc">Adavit sağlık danışmanlığı hizmeti sunar. Tıbbi tanı, tedavi veya reçete hizmeti vermemektedir.</textarea></div>
+  </div>
+
+  <!-- TAB: LİNKLER -->
+  <div class="tab-content" id="tab-linkler">
+    <div class="field">
+      <label>🟢 "Görüşme Planla" butonu linki</label>
+      <input id="l-randevu" placeholder="https://adavit.de/randevu" value="https://adavit.de/randevu">
+    </div>
+    <div class="field">
+      <label>🛍 "İlgili ürünleri incele" linki</label>
+      <input id="l-urun" placeholder="https://adavit.de/urunler" value="https://adavit.de/urunler">
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:11px;color:var(--text-muted);line-height:1.6;">
+      Her konuya özel link eklemek için <strong>Konular</strong> sekmesine git — her konunun altında link alanı var.
+    </div>
+  </div>
+
+  <!-- TAB: KONULAR -->
+  <div class="tab-content" id="tab-konular" style="padding:0;gap:0;">
+    <div style="padding:12px 16px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border);">
+      Her konuya tıkla → metin ve özel link ekle
+    </div>
+    <div class="topic-list" id="topic-list"></div>
+  </div>
+
+  <!-- TAB: GÖRSEL -->
+  <div class="tab-content" id="tab-gorsel">
+    <div class="field"><label>Fotoğraf yükle</label>
+      <label class="upload-area">
+        <i class="ti ti-upload"></i>
+        <span id="upload-txt">Fotoğraf seç veya sürükle bırak</span>
+        <input type="file" id="photo-inp" accept="image/*">
+      </label>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);line-height:1.6;padding:4px 2px;">
+      Fotoğraf yüklendiğinde SVG çizim otomatik olarak gizlenir. Önerilen oran: 4:5 (portre).
+    </div>
+  </div>
+
+  <div class="panel-btns">
+    <button class="btn-dl" id="btn-dl"><i class="ti ti-download"></i> PNG olarak indir</button>
+    <button class="btn-cp" id="btn-cp"><i class="ti ti-code"></i> HTML kodunu kopyala</button>
+  </div>
+</div>
+
+<!-- ═══ ÖNİZLEME ═══ -->
+<div class="preview-wrap">
+  <div class="preview-lbl">Canlı önizleme</div>
+  <div id="pcard">
+
+    <!-- SOL -->
+    <div>
+      <span class="adv-badge" id="p-badge">Türkçe Sağlık Danışmanlığı</span>
+      <h2 class="adv-heading" id="p-heading">Hangi konuda <em>destek</em><br>almak istiyorsunuz?</h2>
+      <p class="adv-sub" id="p-sub">Bir konu seçin — uzman danışmanımız size özel bilgi versin.</p>
+      <div class="adv-chips" id="adv-chips"></div>
+      <div class="adv-acc" id="adv-acc">
+        <div class="adv-card">
+          <div class="adv-card-hdr">
+            <div class="adv-card-ico"><i id="adv-ico" class="ti ti-stethoscope"></i></div>
+            <div class="adv-card-ttl" id="adv-ttl"></div>
+          </div>
+          <div class="adv-card-div"></div>
+          <div class="adv-card-txt" id="adv-txt"></div>
+          <div class="adv-btns">
+            <button class="adv-btn-p" id="adv-btn-randevu" onclick="goLink('randevu')">
+              <i class="ti ti-calendar"></i> Görüşme Planla
+            </button>
+            <button class="adv-btn-l" id="adv-btn-urun" onclick="goLink('urun')">
+              <i class="ti ti-shopping-bag"></i> İlgili ürünleri incele
+            </button>
+          </div>
+        </div>
+      </div>
+      <p class="adv-disc" id="p-disc">Adavit sağlık danışmanlığı hizmeti sunar. Tıbbi tanı, tedavi veya reçete hizmeti vermemektedir.</p>
+    </div>
+
+    <!-- SAĞ GÖRSEL -->
+    <div>
+      <div class="adv-vc">
+        <div class="adv-vi" id="p-imgwrap">
+          <svg id="p-svg" viewBox="0 0 300 375" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;top:0;left:0;">
+            <rect width="300" height="375" fill="#E8F5F5"/>
+            <circle cx="250" cy="50" r="65" fill="#C8E6E6" opacity="0.4"/>
+            <circle cx="30" cy="320" r="45" fill="#C8E6E6" opacity="0.3"/>
+            <ellipse cx="150" cy="350" rx="120" ry="14" fill="#C8E6E6" opacity="0.5"/>
+            <rect x="82" y="175" width="136" height="175" rx="22" fill="#fff"/>
+            <rect x="102" y="175" width="96" height="22" rx="0" fill="#E8F5F5"/>
+            <rect x="130" y="140" width="40" height="43" rx="9" fill="#F5D5B8"/>
+            <ellipse cx="150" cy="122" rx="48" ry="52" fill="#F5D5B8"/>
+            <ellipse cx="150" cy="80" rx="48" ry="27" fill="#2C1810"/>
+            <rect x="102" y="80" width="15" height="32" rx="7" fill="#2C1810"/>
+            <rect x="183" y="80" width="15" height="32" rx="7" fill="#2C1810"/>
+            <ellipse cx="135" cy="118" rx="6" ry="7" fill="white"/>
+            <ellipse cx="165" cy="118" rx="6" ry="7" fill="white"/>
+            <circle cx="136" cy="119" r="3.8" fill="#2C1810"/>
+            <circle cx="166" cy="119" r="3.8" fill="#2C1810"/>
+            <circle cx="138" cy="117" r="1.4" fill="white"/>
+            <circle cx="168" cy="117" r="1.4" fill="white"/>
+            <path d="M127 108 Q135 104 143 108" stroke="#2C1810" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <path d="M157 108 Q165 104 173 108" stroke="#2C1810" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <ellipse cx="150" cy="130" rx="3.5" ry="3" fill="#E8B898"/>
+            <path d="M140 140 Q150 149 160 140" stroke="#C87858" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <path d="M120 184 Q108 207 108 230 Q108 248 127 253 Q150 258 150 238 Q150 218 165 211 Q180 204 184 192" stroke="#2F6F73" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <circle cx="184" cy="188" r="7.5" fill="#2F6F73"/>
+            <circle cx="184" cy="188" r="4.5" fill="#E8F5F5"/>
+            <circle cx="115" cy="181" r="3.8" fill="#2F6F73"/>
+            <circle cx="125" cy="178" r="3.8" fill="#2F6F73"/>
+            <circle cx="150" cy="218" r="2.8" fill="#E8F5F5"/>
+            <circle cx="150" cy="233" r="2.8" fill="#E8F5F5"/>
+            <circle cx="150" cy="248" r="2.8" fill="#E8F5F5"/>
+            <rect x="168" y="205" width="35" height="26" rx="4" fill="#E8F5F5" stroke="#C8E6E6" stroke-width="1"/>
+            <rect x="181" y="198" width="3.8" height="18" rx="2" fill="#2F6F73"/>
+            <rect x="189" y="198" width="3.8" height="14" rx="2" fill="#C88B3A"/>
+            <rect x="52" y="180" width="35" height="100" rx="15" fill="white"/>
+            <rect x="213" y="180" width="35" height="100" rx="15" fill="white"/>
+            <ellipse cx="69" cy="284" rx="16" ry="13" fill="#F5D5B8"/>
+            <ellipse cx="231" cy="284" rx="16" ry="13" fill="#F5D5B8"/>
+            <rect x="38" y="276" width="43" height="31" rx="5" fill="#2F6F73"/>
+            <rect x="42" y="280" width="35" height="23" rx="3" fill="#E8F5F5"/>
+            <line x1="46" y1="288" x2="73" y2="288" stroke="#2F6F73" stroke-width="1" opacity="0.5"/>
+            <line x1="46" y1="294" x2="70" y2="294" stroke="#2F6F73" stroke-width="1" opacity="0.5"/>
+            <line x1="46" y1="300" x2="72" y2="300" stroke="#2F6F73" stroke-width="1" opacity="0.5"/>
+            <rect x="110" y="181" width="80" height="17" rx="8" fill="#2F6F73"/>
+            <text x="150" y="193" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="7.5" font-weight="500" fill="white">adavit.de danışmanı</text>
+          </svg>
+          <img id="p-photo" src="" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;">
+        </div>
+        <div class="adv-vf">
+          <div class="adv-av" id="p-av">TD</div>
+          <div>
+            <div class="adv-vn" id="p-dname">Türkiye'de uzman danışman</div>
+            <div class="adv-vr" id="p-drole">Online · Türkçe görüşme</div>
+          </div>
+          <div class="adv-ol">Çevrimiçi</div>
+        </div>
+        <div class="adv-tr">
+          <div class="adv-tr-i"><div class="adv-tr-n" id="p-t1n">8+</div><div class="adv-tr-l" id="p-t1l">Uzman<br>danışman</div></div>
+          <div class="adv-tr-i"><div class="adv-tr-n" id="p-t2n">7/24</div><div class="adv-tr-l" id="p-t2l">Randevu<br>imkânı</div></div>
+          <div class="adv-tr-i"><div class="adv-tr-n" id="p-t3n">%100</div><div class="adv-tr-l" id="p-t3l">Türkçe<br>hizmet</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+/* ── KONULAR ── */
+const topics = [
+  { label:"Tahlil sonucumu anlamak istiyorum", icon:"ti-flask", link:"",
+    text:"Kan, idrar ve diğer laboratuvar değerlerinizdeki sapma veya dikkat gerektiren noktalar tespit edilir, şikayetlerinizle örtüşüp örtüşmediği değerlendirilir. Durumunuza en uygun tavsiye ve yönlendirme sunulur." },
+  { label:"Radyoloji sonucunu anlamak istiyorum (Röntgen, ultrason, MR)", icon:"ti-scan", link:"",
+    text:"MR, röntgen veya ultrason raporu ve görüntüleriniz incelenir, şikayetlerinizle bağlantısı değerlendirilir. Durumunuza en uygun tavsiye ve yönlendirme sunulur." },
+  { label:"Kan şekeri / diyabet", icon:"ti-droplet", link:"",
+    text:"Kan şekeri ve diğer test sonuçlarınız şikayetlerinizle birlikte incelenir, sapma veya dikkat gerektiren noktalar belirlenir. Durumunuza en uygun tavsiye ve yönlendirme sunulur." },
+  { label:"Tiroid değerlerim", icon:"ti-activity", link:"",
+    text:"Tiroid değerleri tek başına yeterli değildir; şikayetlerinizle birlikte anlam kazanır. TSH, T3, T4 ve ilgili sonuçlarınız bütüncül olarak değerlendirilir, yapılması gerekenler hakkında bilgi alırsınız." },
+  { label:"Tansiyon sorunu", icon:"ti-heart-rate-monitor", link:"",
+    text:"Sürekli yüksek mi çıkıyor, zaman zaman mı düşüyor — yoksa ikisi de mi? Tansiyon değerleriniz, aile öykünüz ve yaşam tarzınız birlikte ele alınır, nasıl takip etmeniz ve ne yapmanız gerektiği konusunda bilgi alırsınız." },
+  { label:"Kolesterol / trigliserit yüksek", icon:"ti-chart-line", link:"",
+    text:"Kolesterol ve trigliserit değerleri tek başına değil, beslenme alışkanlıklarınız, aile öykünüz ve diğer test sonuçlarınızla birlikte anlam kazanır. Bütüncül olarak değerlendirilir, yapılması gerekenler hakkında bilgi alırsınız." },
+  { label:"Kalp & damar sağlığı", icon:"ti-heart", link:"",
+    text:"Çarpıntı mı yaşıyorsunuz, tansiyonunuz mu yüksek, ailenizde kalp hastalığı mı var? Şikayetleriniz, test sonuçlarınız ve aile öykünüz birlikte değerlendirilir, risk faktörleriniz belirlenir ve duruma göre düzenli kontrol altında tutulursunuz." },
+  { label:"Çarpıntı / nefes darlığı", icon:"ti-lungs", link:"",
+    text:"Çarpıntı ve nefes darlığı birçok farklı nedenden kaynaklanabilir; kalp, tiroid, anemi ya da stres bunların başında gelir. Belirtileriniz ve sağlık geçmişiniz birlikte değerlendirilir, durumunuza en uygun tavsiye ve yönlendirme sunulur." },
+  { label:"Sindirim & bağırsak sağlığı", icon:"ti-vaccine", link:"",
+    text:"Yedikten sonra şişiyor musunuz, reflü mu yaşıyorsunuz, bağırsaklarınız düzensiz mi? Sindirim sistemiyle ilgili belirtileriniz, beslenme alışkanlıklarınız ve test sonuçlarınız birlikte ele alınır, durumunuza uygun tavsiye ve yönlendirme sunulur." },
+  { label:"Sürekli yorgunluk", icon:"ti-battery-low", link:"",
+    text:"Yeterince uyuduğunuz halde yorgun kalkıyorsanız, bunun arkasında vitamin eksikliği, tiroid, anemi ya da başka bir neden olabilir. Genel sağlık tablonuz bütüncül olarak değerlendirilir, nedenin anlaşılması ve çözüm için gereken tavsiye sunulur." },
+  { label:"Uyku sorunu", icon:"ti-moon", link:"",
+    text:"Uykuya dalamıyor musunuz, gece sık sık mı uyanıyorsunuz, sabah dinlenmiş kalkmıyor musunuz? Uyku düzeninizi etkileyen olası nedenler tüm yönleriyle ele alınır, daha kaliteli bir uyku için tavsiye ve destek alırsınız." },
+  { label:"Kadın sağlığı (hormon, regl, menopoz)", icon:"ti-gender-female", link:"",
+    text:"Hormonal denge her kadında farklı seyreder; düzensiz regl, ani sıcak basması, ruh hali değişimleri veya kilo artışı bunun işaretleri olabilir. Yaşadıklarınız ve bulgularınız birlikte incelenir, bu süreci daha iyi yönetmeniz için tavsiye ve destek alırsınız." },
+  { label:"Erkek sağlığı (testosteron, prostat, cinsel sağlık)", icon:"ti-gender-male", link:"",
+    text:"Enerjiniz mi azaldı, uyku kaliteniz mi düştü, testosteron değerleriniz mi düşük çıktı? Belirtileriniz, geçmişiniz ve sonuçlarınız bir arada ele alınır, durumunuza uygun tavsiye ve yönlendirme sunulur." },
+  { label:"Stres / tükenmişlik", icon:"ti-brain", link:"",
+    text:"Sürekli yorgun ve bunalmış hissetmek, konsantre olamamak, motivasyon kaybı — bunlar görmezden gelinmemesi gereken sinyallerdir. Zihinsel ve bedensel yükünüz eksiksiz bir şekilde değerlendirilir, bu süreci daha sağlıklı yönetmeniz için destek ve yönlendirme alırsınız." },
+  { label:"İlaç veya takviye hakkında", icon:"ti-pill", link:"",
+    text:"Kullandığınız ilaç ya da takviyenin size uygun olup olmadığı, kalitesi, dozu, kullanım süresi, olası yan etkileri ve diğer ilaçlarla etkileşimi değerlendirilir. Her konuda bilgi ve tavsiye alırsınız." },
+  { label:"Diş implantı", icon:"ti-tooth", link:"",
+    text:"Türkiye'de implant yaptırmayı düşünüyorsunuz ama süreç, maliyet ve doğru klinik seçimi konusunda kafanız mı karışık? Tüm süreç adım adım açıklanır, bilinçli bir karar vermeniz için gereken bilgi ve yönlendirme sunulur." },
+  { label:"Diş teli / ortodonti", icon:"ti-tooth", link:"",
+    text:"Diş teli ya da şeffaf plak tedavisi birçok faktöre göre şekillenir; yaş, çene yapısı ve beklentileriniz bunların başında gelir. Mevcut durumunuz tüm yönleriyle ele alınır, Türkiye'de veya Almanya'da tedavi seçenekleri hakkında bilgi alırsınız." },
+  { label:"Genel ağız & diş sağlığı", icon:"ti-tooth", link:"",
+    text:"Diş ağrısı, diş eti kanaması veya ağız içi rahatsızlıklarınız sağlık geçmişinizle birlikte değerlendirilir. Durumunuza en uygun tavsiye ve yönlendirme sunulur." },
+  { label:"Kronik hastalığımın takibini istiyorum", icon:"ti-clipboard-list", link:"",
+    text:"Kronik bir hastalıkla yaşamak sürekli dikkat ve düzenli takip gerektirir. Mevcut durumunuz, test sonuçlarınız ve yaşam tarzınız birlikte ele alınır, hastalığınızı daha iyi yönetmeniz için tavsiye ve destek alırsınız." },
+  { label:"Birçok doktora gittim — ne yapacağımı artık bilmiyorum", icon:"ti-help-circle", special:true, link:"",
+    text:"Farklı doktorlardan farklı şeyler duydunuz, hâlâ net bir cevap yok mu? Tüm süreciniz ve bulgularınız baştan dinlenir, nerede durduğunuz netleştirilir ve bundan sonra atmanız gereken adımlar için size özel bir yönlendirme yapılır." },
+];
+
+/* ── Konu listesi paneli ── */
+const topicListEl = document.getElementById('topic-list');
+topics.forEach((t, i) => {
+  const item = document.createElement('div');
+  item.className = 'topic-item';
+  item.innerHTML = `
+    <button class="topic-header" onclick="toggleTopic(this, ${i})">
+      <span class="tlabel">${t.label}</span>
+      <i class="ti ti-chevron-down"></i>
+    </button>
+    <div class="topic-body" id="tbody-${i}">
+      <div class="field">
+        <label>Metin</label>
+        <textarea id="ttxt-${i}" rows="3">${t.text}</textarea>
+      </div>
+      <div class="field">
+        <label>🔗 Bu konuya özel link (boş bırakırsan genel "Görüşme Planla" linki kullanılır)</label>
+        <input id="tlink-${i}" placeholder="https://adavit.de/randevu" value="${t.link}">
+      </div>
+    </div>`;
+  topicListEl.appendChild(item);
+
+  document.getElementById('ttxt-'+i).addEventListener('input', e => { topics[i].text = e.target.value; if(activeIdx===i) document.getElementById('adv-txt').textContent = e.target.value; });
+  document.getElementById('tlink-'+i).addEventListener('input', e => { topics[i].link = e.target.value; });
+});
+
+function toggleTopic(btn, i) {
+  btn.classList.toggle('open');
+  document.getElementById('tbody-'+i).classList.toggle('open');
+}
+
+/* ── Chip oluşturucu ── */
+let activeIdx = null;
+const chipsEl = document.getElementById('adv-chips');
+const acc = document.getElementById('adv-acc');
+const advTtl = document.getElementById('adv-ttl');
+const advTxt = document.getElementById('adv-txt');
+const advIco = document.getElementById('adv-ico');
+
+topics.forEach((t, i) => {
+  const chip = document.createElement('button');
+  chip.className = 'adv-chip' + (t.special ? ' special' : '');
+  const dot = document.createElement('span'); dot.className = 'dot';
+  chip.appendChild(dot);
+  chip.appendChild(document.createTextNode(t.label));
+  chip.addEventListener('click', () => {
+    if (activeIdx === i) { chip.classList.remove('active'); acc.classList.remove('open'); activeIdx = null; return; }
+    document.querySelectorAll('.adv-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    advTtl.textContent = t.label;
+    advTxt.textContent = t.text;
+    advIco.className = 'ti ' + t.icon;
+    acc.classList.add('open');
+    activeIdx = i;
+    setTimeout(() => acc.scrollIntoView({ behavior:'smooth', block:'nearest' }), 150);
+  });
+  chipsEl.appendChild(chip);
+});
+
+/* ── Link yönlendirme ── */
+function goLink(type) {
+  let url = '';
+  if (type === 'randevu') {
+    url = (activeIdx !== null && topics[activeIdx].link) ? topics[activeIdx].link : document.getElementById('l-randevu').value;
+  } else {
+    url = document.getElementById('l-urun').value;
+  }
+  if (url) window.open(url, '_blank');
+}
+
+/* ── Genel alan bağlama ── */
+function liveUpdate(inpId, targetId, prop) {
+  document.getElementById(inpId).addEventListener('input', e => {
+    document.getElementById(targetId)[prop] = e.target.value;
+  });
+}
+document.getElementById('g-badge').addEventListener('input', e => document.getElementById('p-badge').textContent = e.target.value);
+function updateH() {
+  document.getElementById('p-heading').innerHTML =
+    `${document.getElementById('g-t1').value} <em>${document.getElementById('g-t2').value}</em><br>${document.getElementById('g-t3').value}`;
+}
+['g-t1','g-t2','g-t3'].forEach(id => document.getElementById(id).addEventListener('input', updateH));
+liveUpdate('g-sub','p-sub','textContent');
+liveUpdate('g-disc','p-disc','textContent');
+liveUpdate('g-dname','p-dname','textContent');
+liveUpdate('g-drole','p-drole','textContent');
+liveUpdate('g-t1n','p-t1n','textContent');
+liveUpdate('g-t2n','p-t2n','textContent');
+liveUpdate('g-t3n','p-t3n','textContent');
+liveUpdate('g-t1l','p-t1l','innerHTML');
+liveUpdate('g-t2l','p-t2l','innerHTML');
+liveUpdate('g-t3l','p-t3l','innerHTML');
+
+document.getElementById('g-dname').addEventListener('input', e => {
+  const w = e.target.value.trim().split(' ');
+  document.getElementById('p-av').textContent = w.slice(0,2).map(x=>x[0]||'').join('').toUpperCase() || 'TD';
+});
+
+/* ── Fotoğraf ── */
+document.getElementById('photo-inp').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('p-photo').src = ev.target.result;
+    document.getElementById('p-photo').style.display = 'block';
+    document.getElementById('p-svg').style.display = 'none';
+    document.getElementById('upload-txt').textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+});
+
+/* ── Tabs ── */
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+/* ── PNG İndir ── */
+document.getElementById('btn-dl').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-dl');
+  btn.innerHTML = '<i class="ti ti-loader"></i> Hazırlanıyor...';
+  try {
+    const canvas = await html2canvas(document.getElementById('pcard'), { scale:2, useCORS:true, backgroundColor:'#F7FAFA' });
+    const a = document.createElement('a');
+    a.download = 'adavit-konu-secimi.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  } catch(e) { alert('Hata: '+e.message); }
+  btn.innerHTML = '<i class="ti ti-download"></i> PNG olarak indir';
+});
+
+/* ── HTML Kopyala ── */
+document.getElementById('btn-cp').addEventListener('click', () => {
+  navigator.clipboard.writeText(document.getElementById('pcard').outerHTML).then(() => {
+    const btn = document.getElementById('btn-cp');
+    btn.innerHTML = '<i class="ti ti-check"></i> Kopyalandı!';
+    setTimeout(() => btn.innerHTML = '<i class="ti ti-code"></i> HTML kodunu kopyala', 2000);
+  });
+});
+</script>
+</body>
+</html>
